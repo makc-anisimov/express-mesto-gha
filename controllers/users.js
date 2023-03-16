@@ -18,7 +18,7 @@ const getUsers = (req, res) => {
     .catch((err) => {
       const ERROR_CODE = 500;
       if (err.name === 'SomeErrorName') {
-        res.status(ERROR_CODE).send({ message: 'Ошибка по умолчанию' });
+        res.status(ERROR_CODE).send({ message: 'На сервере произошла ошибка' });
       }
     });
 };
@@ -35,7 +35,11 @@ const createUser = (req, res) => {
 };
 
 const updateProfile = (req, res) => {
-  User.findByIdAndUpdate(req.user._id, { $set: { ...req.body } })
+  User.findByIdAndUpdate(
+    req.user._id,
+    { $set: { ...req.body } },
+    { new: true },
+  )
     .then(() => res.status(200).send(req.body))
     .catch((err) => {
       const ERROR_CODE = 400;
@@ -46,7 +50,11 @@ const updateProfile = (req, res) => {
 };
 
 const updateAvatar = (req, res) => {
-  User.findByIdAndUpdate(req.user._id, { $set: { ...req.body } })
+  User.findByIdAndUpdate(
+    req.user._id,
+    { $set: { ...req.body } },
+    { new: true },
+  )
     .then(() => res.status(200).send(req.body))
     .catch((err) => {
       const ERROR_CODE = 500;

@@ -6,7 +6,7 @@ const getCards = (req, res) => {
     .catch((err) => {
       const ERROR_CODE = 500;
       if (err.name === 'SomeErrorName') {
-        res.status(ERROR_CODE).send({ message: 'Ошибка по умолчанию.' });
+        res.status(ERROR_CODE).send({ message: 'На сервере произошла ошибка' });
       }
     });
 };
