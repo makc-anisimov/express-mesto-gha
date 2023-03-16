@@ -25,7 +25,7 @@ const getUsers = (req, res) => {
 
 const createUser = (req, res) => {
   User.create({ ...req.body })
-    .then(() => res.status(200).send(req.body))
+    .then(() => res.status(200).send({ _id: req.user._id, ...req.body }))
     .catch((err) => {
       const ERROR_CODE = 400;
       if (err.name === 'SomeErrorName') {
