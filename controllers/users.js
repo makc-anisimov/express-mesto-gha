@@ -1,36 +1,45 @@
 const User = require('../models/user');
+const {
+  STATUS_OK,
+  BAD_REQUEST,
+  NOT_FOUND,
+  INTERNAL_SERVER_ERROR,
+} = require('../utils/consts');
 
 const getUser = (req, res) => {
   const { userId } = req.params;
   return User.findById(userId)
-    .then((user) => res.status(200).send(user))
+    .then((user) => {
+      res.status(STATUS_OK).send(user);
+    })
     .catch((err) => {
-      const ERROR_CODE = 404;
-      if (err.name === 'SomeErrorName') {
-        res.status(ERROR_CODE).send({ message: 'Пользователь по указанному _id не найден' });
-      }
+      if (err.name === 'CastError') {
+        res.status(NOT_FOUND).send({ message: 'Пользователь по указанному _id не найден' });
+      } else res.status(INTERNAL_SERVER_ERROR).send({ message: 'На сервере произошла ошибка' });
     });
 };
 
 const getUsers = (req, res) => {
   User.find({})
-    .then((users) => res.status(200).send(users))
-    .catch((err) => {
-      const ERROR_CODE = 500;
-      if (err.name === 'SomeErrorName') {
-        res.status(ERROR_CODE).send({ message: 'На сервере произошла ошибка' });
-      }
+    .then((users) => {
+      if (users.length > 0) res.status(STATUS_OK).send(users);
+      else res.status(NOT_FOUND).send({ message: 'Пользователи не найдены' });
+    })
+    .catch(() => {
+      res.stats(INTERNAL_SERVER_ERROR).send({ message: 'На сервере произошла ошибка' });
     });
 };
 
 const createUser = (req, res) => {
   User.create({ ...req.body })
-    .then(() => res.status(200).send({ _id: req.user._id, ...req.body }))
+    .then(() => {
+      res.status(STATUS_OK).send({ _id: req.user._id, ...req.body });
+    })
     .catch((err) => {
-      const ERROR_CODE = 400;
-      if (err.name === 'SomeErrorName') {
-        res.status(ERROR_CODE).send({ message: ' Переданы некорректные данные при создании пользователя.' });
-      }
+      res.status(BAD_REQUEST).send(err);
+      if (err.name === 'ValidationError') {
+        res.status(BAD_REQUEST).send({ message: ' Переданы некорректные данные при создании пользователя.' });
+      } else res.status(INTERNAL_SERVER_ERROR).send({ message: 'На сервере произошла ошибка' });
     });
 };
 
@@ -38,14 +47,20 @@ const updateProfile = (req, res) => {
   User.findByIdAndUpdate(
     req.user._id,
     { $set: { ...req.body } },
-    { new: true },
+    {
+      new: true,
+      runValidators: true,
+    },
   )
-    .then(() => res.status(200).send(req.body))
+    .then((result) => {
+      if (result !== null) {
+        res.status(STATUS_OK).send(req.body);
+      } else res.status(INTERNAL_SERVER_ERROR).send({ message: 'На сервере произошла ошибка' });
+    })
     .catch((err) => {
-      const ERROR_CODE = 400;
-      if (err.name === 'SomeErrorName') {
-        res.status(ERROR_CODE).send({ message: 'Переданы некорректные данные при обновлении профиля.' });
-      }
+      if (err.name === 'ValidationError') {
+        res.status(BAD_REQUEST).send({ message: 'Переданы некорректные данные при обновлении профиля.' });
+      } else res.status(INTERNAL_SERVER_ERROR).send({ message: 'На сервере произошла ошибка' });
     });
 };
 
@@ -53,14 +68,21 @@ const updateAvatar = (req, res) => {
   User.findByIdAndUpdate(
     req.user._id,
     { $set: { ...req.body } },
-    { new: true },
+    {
+      new: true,
+      runValidators: true,
+    },
   )
-    .then(() => res.status(200).send(req.body))
+    .then((result) => {
+      // console.log('then result', result);
+      if (result !== null) {
+        res.status(STATUS_OK).send(req.body);
+      } else res.status(INTERNAL_SERVER_ERROR).send({ message: 'На сервере произошла ошибка' });
+    })
     .catch((err) => {
-      const ERROR_CODE = 500;
-      if (err.name === 'SomeErrorName') {
-        res.status(ERROR_CODE).send({ message: 'Переданы некорректные данные при обновлении аватара. ' });
-      }
+      if (err.name === 'ValidationError') {
+        res.status(BAD_REQUEST).send({ message: 'Переданы некорректные данные при обновлении аватара.' });
+      } else res.status(INTERNAL_SERVER_ERROR).send({ message: 'На сервере произошла ошибка' });
     });
 };
 

@@ -1,37 +1,43 @@
 const Card = require('../models/cards');
+const {
+  STATUS_OK,
+  BAD_REQUEST,
+  NOT_FOUND,
+  INTERNAL_SERVER_ERROR,
+} = require('../utils/consts');
 
 const getCards = (req, res) => {
   Card.find({})
-    .then((cards) => res.status(200).send(cards))
-    .catch((err) => {
-      const ERROR_CODE = 500;
-      if (err.name === 'SomeErrorName') {
-        res.status(ERROR_CODE).send({ message: 'На сервере произошла ошибка' });
-      }
+    .then((cards) => {
+      if (cards.length > 0) res.status(STATUS_OK).send(cards);
+      else res.status(NOT_FOUND).send({ message: 'Карточки не найдены' });
+    })
+    .catch(() => {
+      res.stats(INTERNAL_SERVER_ERROR).send({ message: 'На сервере произошла ошибка' });
     });
 };
 
 const createCard = (req, res) => {
   const { name, link } = req.body;
   return Card.create({ name, link, owner: req.user._id })
-    .then(() => res.status(200).send(req.body))
+    .then(() => res.status(STATUS_OK).send(req.body))
     .catch((err) => {
-      const ERROR_CODE = 400;
-      if (err.name === 'SomeErrorName') {
-        res.status(ERROR_CODE).send({ message: 'Переданы некорректные данные при создании карточки' });
-      }
+      if (err.name === 'ValidationError') {
+        res.status(BAD_REQUEST).send({ message: 'Переданы некорректные данные при создании карточки' });
+      } else res.status(INTERNAL_SERVER_ERROR).send({ message: 'На сервере произошла ошибка' });
     });
 };
 
 const deleteCard = (req, res) => {
   const { cardId } = req.params;
   return Card.findByIdAndDelete(cardId)
-    .then(() => res.status(200).send({ message: 'TEST! карточка удалена' }))
-    .catch((err) => {
-      const ERROR_CODE = 404;
-      if (err.name === 'SomeErrorName') {
-        res.status(ERROR_CODE).send({ message: 'Карточка с указанным _id не найдена.' });
-      }
+    .then((result) => {
+      if (result !== null) {
+        res.status(STATUS_OK).send({ message: 'карточка удалена' });
+      } else res.status(BAD_REQUEST).send({ message: 'Карточка с указанным _id не найдена' });
+    })
+    .catch(() => {
+      res.status(INTERNAL_SERVER_ERROR).send({ message: 'На сервере произошла ошибка' });
     });
 };
 
@@ -41,12 +47,13 @@ const addLike = (req, res) => {
     { $addToSet: { likes: req.user._id } }, // добавить _id в массив, если его там нет
     { new: true },
   )
-    .then(() => res.status(200).send())
-    .catch((err) => {
-      const ERROR_CODE = 400;
-      if (err.name === 'SomeErrorName') {
-        res.status(ERROR_CODE).send({ message: ' Переданы некорректные данные для постановки лайка' });
-      }
+    .then((result) => {
+      if (result !== null) {
+        res.status(STATUS_OK).send();
+      } else res.status(BAD_REQUEST).send({ message: 'Переданы некорректные данные для постановки лайка' });
+    })
+    .catch(() => {
+      res.status(INTERNAL_SERVER_ERROR).send({ message: 'На сервере произошла ошибка' });
     });
 };
 
@@ -56,12 +63,13 @@ const deleteLike = (req, res) => {
     { $pull: { likes: req.user._id } }, // убрать _id из массива
     { new: true },
   )
-    .then(() => res.status(200).send())
-    .catch((err) => {
-      const ERROR_CODE = 400;
-      if (err.name === 'SomeErrorName') {
-        res.status(ERROR_CODE).send({ message: ' Переданы некорректные данные для снятия лайка' });
-      }
+    .then((result) => {
+      if (result !== null) {
+        res.status(STATUS_OK).send();
+      } else res.status(BAD_REQUEST).send({ message: 'Переданы некорректные данные для снятия лайка' });
+    })
+    .catch(() => {
+      res.status(INTERNAL_SERVER_ERROR).send({ message: 'На сервере произошла ошибка' });
     });
 };
 
