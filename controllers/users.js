@@ -4,7 +4,6 @@ const bcrypt = require('bcrypt');
 const User = require('../models/user');
 const {
   STATUS_OK,
-  // BAD_REQUEST,
   NOT_FOUND,
   INTERNAL_SERVER_ERROR,
   JWT_SECRET,
@@ -51,8 +50,14 @@ const createUser = (req, res, next) => {
       email,
       password: hash,
     }))
-    .then((user) => {
-      res.status(STATUS_OK).send(user);
+    .then((createdUser) => {
+      res.status(STATUS_OK).send({
+        name: createdUser.name,
+        about: createdUser.about,
+        avatar: createdUser.avatar,
+        email: createdUser.name,
+        _id: createdUser._id,
+      });
     })
     .catch((err) => {
       next(err);
