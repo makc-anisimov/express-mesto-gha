@@ -2,33 +2,31 @@
 const jsonwebtoken = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const User = require('../models/user');
+const NotFoundError = require('../errors/not-found-err');
+const InternalServerError = require('../errors/internal-server-err');
+
 const {
   STATUS_OK,
-  NOT_FOUND,
-  INTERNAL_SERVER_ERROR,
+  // NOT_FOUND,
+  // INTERNAL_SERVER_ERROR,
   JWT_SECRET,
   ACCESS_DENIED,
 } = require('../utils/consts');
 
 const getUser = (req, res, next) => {
-  const userId = req.user._id;
-  return User.findById(userId)
+  User.findById(req.user._id)
     .then((user) => {
-      if (user !== null) {
-        res.status(STATUS_OK).send(user);
-      } else res.status(NOT_FOUND).send({ message: 'Пользователь по указанному _id не найден' });
+      if (!user) {
+        throw new NotFoundError('Пользователь по указанному _id не найден');
+      }
+      res.status(STATUS_OK).send(user);
     })
-    .catch((err) => {
-      next(err);
-    });
+    .catch(next);
 };
 
 const getUsers = (req, res, next) => {
   User.find({})
-    .then((users) => {
-      if (users.length > 0) res.status(STATUS_OK).send(users);
-      else res.status(NOT_FOUND).send({ message: 'Пользователи не найдены' });
-    })
+    .then((users) => res.status(STATUS_OK).send(users))
     .catch((err) => {
       next(err);
     });
@@ -72,41 +70,20 @@ const updateProfile = (req, res, next) => {
       new: true,
       runValidators: true,
     },
-  )
-    .then((result) => {
-      if (result !== null) {
-        res.status(STATUS_OK).send(req.body);
-      } else res.status(INTERNAL_SERVER_ERROR).send({ message: 'На сервере произошла ошибка' });
-    })
-    .catch((err) => {
-      next(err);
-    });
+  ).then((result) => {
+    if (!result) {
+      throw new InternalServerError('На сервере произошла ошибка');
+    }
+    res.status(STATUS_OK).send(req.body);
+  }).catch(next);
 };
 
-const updateAvatar = (req, res, next) => {
-  User.findByIdAndUpdate(
-    req.user._id,
-    { $set: { ...req.body } },
-    {
-      new: true,
-      runValidators: true,
-    },
-  )
-    .then((result) => {
-      if (result !== null) {
-        res.status(STATUS_OK).send(req.body);
-      } else res.status(INTERNAL_SERVER_ERROR).send({ message: 'На сервере произошла ошибка' });
-    })
-    .catch((err) => {
-      next(err);
-    });
-};
 const login = (req, res, next) => {
   const { email, password } = req.body;
   User
     .findOne({ email })
     .select('+password')
-    .orFail(() => res.status(NOT_FOUND).send({ message: 'Пользователь не найден' }))
+    .orFail(() => res.status(ACCESS_DENIED).send({ message: 'Ошибка авторизации' }))
     .then((user) => bcrypt.compare(password, user.password).then((matched) => {
       if (matched) {
         const {
@@ -129,9 +106,7 @@ const login = (req, res, next) => {
       const jwt = jsonwebtoken.sign({ _id: user._id.toString() }, JWT_SECRET, { expiresIn: '7d' });
       res.send({ user, jwt });
     })
-    .catch((err) => {
-      next(err);
-    });
+    .catch(next);
 };
 
 module.exports = {
@@ -139,6 +114,6 @@ module.exports = {
   getUsers,
   createUser,
   updateProfile,
-  updateAvatar,
+  // updateAvatar,
   login,
 };

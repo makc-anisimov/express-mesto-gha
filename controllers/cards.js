@@ -9,8 +9,9 @@ const {
 const getCards = (req, res, next) => {
   Card.find({})
     .then((cards) => {
-      if (cards.length > 0) res.status(STATUS_OK).send(cards);
-      else res.status(NOT_FOUND).send({ message: 'Карточки не найдены' });
+      res.status(STATUS_OK).send(cards);
+      // if (cards.length > 0) res.status(STATUS_OK).send(cards);
+      // else res.status(NOT_FOUND).send({ message: 'Карточки не найдены' });
     })
     .catch((err) => {
       next(err);
@@ -32,7 +33,7 @@ const deleteCard = (req, res, next) => {
     .then((card) => {
       if (card !== null) {
         if (card.owner.toString() === req.user._id) {
-          Card.findByIdAndDelete(cardId)
+          card.deleteOne()
             .then(() => {
               res.status(STATUS_OK).send({ message: 'карточка удалена' });
             });
