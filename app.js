@@ -1,7 +1,5 @@
 const express = require('express');
-// const path = require('path');
 const mongoose = require('mongoose');
-// const bodyParser = require('body-parser');
 const helmet = require('helmet');
 const { errors } = require('celebrate');
 const {
@@ -12,8 +10,7 @@ const {
   loginValidation,
   createUserValidation,
 } = require('./middlewares/validation');
-
-// const errorHandler = require('./middlewares/error-handler');
+const NotFoundError = require('./errors/not-found-err');
 
 const { PORT = 3000 } = process.env;
 
@@ -23,8 +20,6 @@ mongoose.connect('mongodb://127.0.0.1:27017/mestodb', {
 
 const app = express();
 app.use(helmet());
-// app.use(express.static(path.join((__dirname, 'public'))));
-// app.use(bodyParser.json());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -34,9 +29,12 @@ app.post('/signup', createUserValidation, createUser);
 app.use('/users', require('./routes/users'));
 app.use('/cards', require('./routes/cards'));
 
+app.use((req, res, next) => {
+  next(new NotFoundError('Страница не найдена!'));
+});
+
 app.use(errors()); // обработчик ошибок celebrate
 app.use((err, req, res, next) => {
-  // если у ошибки нет статуса, выставляем 500
   const { statusCode = 500, message } = err;
 
   res.status(statusCode).send({
@@ -45,10 +43,6 @@ app.use((err, req, res, next) => {
       : message,
   });
 });
-// app.use((err, req, res) => {
-//   res.status(err.statusCode).send({ message: err.message });
-// });
-// app.use(errorHandler); // кастомный обработчик ошибок
 app.listen(PORT, () => {
   console.log('START APP MY TEST!');
 });

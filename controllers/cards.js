@@ -1,17 +1,13 @@
 const Card = require('../models/cards');
-const {
-  STATUS_OK,
-  BAD_REQUEST,
-  NOT_FOUND,
-  FORBIDDEN,
-} = require('../utils/consts');
+const ForbiddenError = require('../errors/forbidden-err');
+const NotFoundError = require('../errors/not-found-err');
+
+const { STATUS_OK } = require('../utils/consts');
 
 const getCards = (req, res, next) => {
   Card.find({})
     .then((cards) => {
       res.status(STATUS_OK).send(cards);
-      // if (cards.length > 0) res.status(STATUS_OK).send(cards);
-      // else res.status(NOT_FOUND).send({ message: 'Карточки не найдены' });
     })
     .catch((err) => {
       next(err);
@@ -22,27 +18,25 @@ const createCard = (req, res, next) => {
   const { name, link } = req.body;
   return Card.create({ name, link, owner: req.user._id })
     .then(() => res.status(STATUS_OK).send(req.body))
-    .catch((err) => {
-      next(err);
-    });
+    .catch(next);
 };
 
 const deleteCard = (req, res, next) => {
   const { cardId } = req.params;
-  return Card.findById(cardId)
+  Card.findById(cardId)
     .then((card) => {
-      if (card !== null) {
-        if (card.owner.toString() === req.user._id) {
-          card.deleteOne()
-            .then(() => {
-              res.status(STATUS_OK).send({ message: 'карточка удалена' });
-            });
-        } else res.status(FORBIDDEN).send({ message: 'Недостаточно прав доступа' });
-      } else res.status(NOT_FOUND).send({ message: 'Карточка с указанным _id не найдена' });
+      if (!card) {
+        throw new NotFoundError('Карточка с указанным _id не найдена');
+      }
+      if (card.owner.toString() !== req.user._id) {
+        throw new ForbiddenError('Недостаточно прав доступа');
+      }
+      return card.deleteOne()
+        .then(() => {
+          res.status(STATUS_OK).send({ message: 'карточка удалена' });
+        });
     })
-    .catch((err) => {
-      next(err);
-    });
+    .catch(next);
 };
 
 const addLike = (req, res, next) => {
@@ -52,13 +46,12 @@ const addLike = (req, res, next) => {
     { new: true },
   )
     .then((result) => {
-      if (result !== null) {
-        res.status(STATUS_OK).send();
-      } else res.status(BAD_REQUEST).send({ message: 'Переданы некорректные данные для постановки лайка' });
+      if (!result) {
+        throw new NotFoundError('Карточка с указанным _id не найдена');
+      }
+      return res.status(STATUS_OK).send();
     })
-    .catch((err) => {
-      next(err);
-    });
+    .catch(next);
 };
 
 const deleteLike = (req, res, next) => {
@@ -68,13 +61,12 @@ const deleteLike = (req, res, next) => {
     { new: true },
   )
     .then((result) => {
-      if (result !== null) {
-        res.status(STATUS_OK).send();
-      } else res.status(BAD_REQUEST).send({ message: 'Переданы некорректные данные для снятия лайка' });
+      if (!result) {
+        throw new NotFoundError('Карточка с указанным _id не найдена');
+      }
+      return res.status(STATUS_OK).send();
     })
-    .catch((err) => {
-      next(err);
-    });
+    .catch(next);
 };
 
 module.exports = {

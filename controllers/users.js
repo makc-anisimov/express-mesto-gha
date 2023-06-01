@@ -3,18 +3,26 @@ const jsonwebtoken = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const User = require('../models/user');
 const NotFoundError = require('../errors/not-found-err');
-const InternalServerError = require('../errors/internal-server-err');
+const AccessDeniedError = require('../errors/access-denied-err');
 
 const {
   STATUS_OK,
-  // NOT_FOUND,
-  // INTERNAL_SERVER_ERROR,
   JWT_SECRET,
-  ACCESS_DENIED,
 } = require('../utils/consts');
 
-const getUser = (req, res, next) => {
+const getUserMe = (req, res, next) => {
   User.findById(req.user._id)
+    .then((user) => {
+      if (!user) {
+        throw new NotFoundError('Пользователь по указанному _id не найден');
+      }
+      res.status(STATUS_OK).send(user);
+    })
+    .catch(next);
+};
+
+const getUser = (req, res, next) => {
+  User.findById(req.params.userId)
     .then((user) => {
       if (!user) {
         throw new NotFoundError('Пользователь по указанному _id не найден');
@@ -72,7 +80,7 @@ const updateProfile = (req, res, next) => {
     },
   ).then((result) => {
     if (!result) {
-      throw new InternalServerError('На сервере произошла ошибка');
+      throw new NotFoundError('Пользователь не найден');
     }
     res.status(STATUS_OK).send(req.body);
   }).catch(next);
@@ -83,24 +91,26 @@ const login = (req, res, next) => {
   User
     .findOne({ email })
     .select('+password')
-    .orFail(() => res.status(ACCESS_DENIED).send({ message: 'Ошибка авторизации' }))
+    .orFail(() => {
+      throw new AccessDeniedError('Ошибка авторизации');
+    })
     .then((user) => bcrypt.compare(password, user.password).then((matched) => {
-      if (matched) {
-        const {
-          name,
-          about,
-          avatar,
-          _id,
-        } = user;
-        return {
-          name,
-          about,
-          avatar,
-          email,
-          _id,
-        };
+      if (!matched) {
+        throw new AccessDeniedError('Ошибка доступа');
       }
-      return res.status(ACCESS_DENIED).send({ message: 'Ошибка доступа' });
+      const {
+        name,
+        about,
+        avatar,
+        _id,
+      } = user;
+      return {
+        name,
+        about,
+        avatar,
+        email,
+        _id,
+      };
     }))
     .then((user) => {
       const jwt = jsonwebtoken.sign({ _id: user._id.toString() }, JWT_SECRET, { expiresIn: '7d' });
@@ -110,10 +120,10 @@ const login = (req, res, next) => {
 };
 
 module.exports = {
+  getUserMe,
   getUser,
   getUsers,
   createUser,
   updateProfile,
-  // updateAvatar,
   login,
 };
