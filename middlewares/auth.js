@@ -8,6 +8,7 @@ const auth = (req, res, next) => {
 
   if (!authorization || !authorization.startsWith('Bearer')) {
     next(new AccessDeniedError('Необходима авторизация'));
+    return;
   }
 
   const jwt = authorization.replace('Bearer ', '');
@@ -15,9 +16,9 @@ const auth = (req, res, next) => {
   try {
     payload = jsonwebtoken.verify(jwt, JWT_SECRET);
     req.user = payload;
-  } catch (err) {
-    throw new AccessDeniedError('Необходима авторизация');
+  } catch (e) {
+    const err = new AccessDeniedError('Необходима авторизация');
+    next(err);
   }
-  next();
 };
 module.exports = auth;
