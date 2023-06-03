@@ -1,9 +1,9 @@
-/* eslint-disable max-len */
 const jsonwebtoken = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const User = require('../models/user');
 const NotFoundError = require('../errors/not-found-err');
 const AccessDeniedError = require('../errors/access-denied-err');
+const ConflictError = require('../errors/conflict-err');
 
 const {
   STATUS_OK,
@@ -24,8 +24,6 @@ const getUserMe = (req, res, next) => {
 const getUser = (req, res, next) => {
   User.findById(req.params.userId)
     .then((user) => {
-      console.log('req.params.userId', req.params.userId);
-      console.log('user', user);
       if (!user) {
         throw new NotFoundError('Пользователь по указанному _id не найден');
       }
@@ -67,7 +65,8 @@ const createUser = (req, res, next) => {
         _id: createdUser._id,
       });
     })
-    .catch((err) => {
+    .catch(() => {
+      const err = new ConflictError('Такой email уже зарегистрирован');
       next(err);
     });
 };
@@ -94,11 +93,11 @@ const login = (req, res, next) => {
     .findOne({ email })
     .select('+password')
     .orFail(() => {
-      throw new AccessDeniedError('Ошибка авторизации');
+      throw new AccessDeniedError('Неправильная почта или пароль');
     })
     .then((user) => bcrypt.compare(password, user.password).then((matched) => {
       if (!matched) {
-        throw new AccessDeniedError('Ошибка доступа');
+        throw new AccessDeniedError('Неправильная почта или пароль');
       }
       const {
         name,

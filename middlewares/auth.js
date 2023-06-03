@@ -16,6 +16,7 @@ const auth = (req, res, next) => {
   try {
     payload = jsonwebtoken.verify(jwt, JWT_SECRET);
     req.user = payload;
+    next();
   } catch (e) {
     const err = new AccessDeniedError('Необходима авторизация');
     next(err);
