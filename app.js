@@ -11,6 +11,7 @@ const {
   createUserValidation,
 } = require('./middlewares/validation');
 const NotFoundError = require('./errors/not-found-err');
+const { requestLogger, errorLogger } = require('./middlewares/logger');
 
 const { PORT = 3000 } = process.env;
 
@@ -23,6 +24,8 @@ app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use(requestLogger);
+
 app.post('/signin', loginValidation, login);
 app.post('/signup', createUserValidation, createUser);
 
@@ -32,7 +35,7 @@ app.use('/cards', require('./routes/cards'));
 app.use((req, res, next) => {
   next(new NotFoundError('Страница не найдена!'));
 });
-
+app.use(errorLogger);
 app.use(errors()); // обработчик ошибок celebrate
 app.use((err, req, res, next) => {
   const { statusCode = 500, message } = err;
